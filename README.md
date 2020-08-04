@@ -1,9 +1,12 @@
--- 创建数据表
-CREATE TABLE pet (
-    name VARCHAR(20),
-    owner VARCHAR(20),
-    species VARCHAR(20),
-    sex CHAR(1),
-    birth DATE,
-    death DATE
-);
+# 一级标题
+
+## 二级标题
+
+### 三级标题
+
+```mysql
+create database 库名
+```
+
+
+
