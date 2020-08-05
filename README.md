@@ -279,5 +279,53 @@ ERROR 1452 (23000): Cannot add or update a child row: a foreign key constraint f
 
 
 
+### 数据库的三大设计范式
 
+#### 第一范式1NF
 
+某一个字段值详细到不可以拆分，就是第一范式。
+
+字段不一定是越详细越好，要根据项目需求。
+
+#### 第二范式2NF
+
+满足第一范式的前提下，第二范式要求：除主键外每一列都必须完全依赖主键。
+
+这个依赖二字可以解释为**主从关系** ，意思就是其他每一个字段都要服从主键字段，不能再服从别的字段
+
+比如这个表里有字段**‘班主任’ ‘学生1’‘学生2’ ‘学生3’**，那么**学生1 学生2 学生3** 都必须听从主键字段 **班主任**
+
+如果出现不完全依赖，那么只能发生在联合主键的情况下。意思就是如果上述表中还有**副班主任**字段，
+
+那么将**副班主任**和**班主任**作为联合主键，这样**学生123**听任意一个老师的话都是一样的，也满足第二范式。
+
+#### 第三范式3NF
+
+必须先满足第二范式，然后除开主键列之外的其他列之间不能有传递（主从）关系。
+
+```mysql
+CREATE TABLE myorder (
+    order_id INT PRIMARY KEY,
+    product_id INT,
+    customer_id INT,
+    customer_phone VARCHAR(15)
+);
+```
+
+表中的 `customer_phone` 有可能依赖于 `order_id` 、 `customer_id` 两列，也就不满足了第三范式的设计：其他列之间不能有传递依赖关系。
+
+```mysql
+CREATE TABLE myorder (
+    order_id INT PRIMARY KEY,
+    product_id INT,
+    customer_id INT
+);
+
+CREATE TABLE customer (
+    id INT PRIMARY KEY,
+    name VARCHAR(20),
+    phone VARCHAR(15)
+);
+```
+
+修改后分别都满足第三范式，没有传递关系。
