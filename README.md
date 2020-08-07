@@ -329,3 +329,386 @@ CREATE TABLE customer (
 ```
 
 修改后分别都满足第三范式，没有传递关系。
+
+### 数据查询练习
+
+#### 数据准备
+
+```mysql
+#创建查询练习数据库
+create database selecttest;
+#创建学生表
+--学生编号--学生姓名--学生性别--出生年月日--所在班级
+create table student(
+    sno varchar(20) primary key,
+    sname varchar(20) not null,
+    ssex varchar(20) not null,
+    sbirthday datetime,
+    class varchar(20)
+);
+#创建教师表
+--教师编号--教师姓名--教师性别--出生年月日--职称--所在部门
+create table teacher(
+    tno varchar(20) primary key,
+    tname varchar(20) not null,
+    tsex varchar(20) not null,
+    tbirthday datetime,
+    prof varchar(20) not null,
+    depart varchar(20) not null
+);
+#创建课程表
+--课程编号--课程名--教师编号
+create table course(
+    cno varchar(20) primary key,
+    cname varchar(20) not null,
+    tno varchar(20) not null,
+    foreign key(tno) references teacher(tno)
+);
+#创建成绩表
+--学号--课程号--成绩
+create table score(
+    sno varchar(20) not null,
+    cno varchar(20) not null,
+    degree decimal,
+    foreign key(sno) references student(sno),
+    foreign key(cno) references course(cno),
+    -- 设置 s_no, c_no 为联合主键
+    PRIMARY KEY(sno, cno)
+);
+#=====================================================================================
+#添加数据
+#添加学生表数据
+INSERT INTO student VALUES('101', '曾华', '男', '1977-09-01', '95033');
+INSERT INTO student VALUES('102', '匡明', '男', '1975-10-02', '95031');
+INSERT INTO student VALUES('103', '王丽', '女', '1976-01-23', '95033');
+INSERT INTO student VALUES('104', '李军', '男', '1976-02-20', '95033');
+INSERT INTO student VALUES('105', '王芳', '女', '1975-02-10', '95031');
+INSERT INTO student VALUES('106', '陆军', '男', '1974-06-03', '95031');
+INSERT INTO student VALUES('107', '王尼玛', '男', '1976-02-20', '95033');
+INSERT INTO student VALUES('108', '张全蛋', '男', '1975-02-10', '95031');
+INSERT INTO student VALUES('109', '赵铁柱', '男', '1974-06-03', '95031');
+
+#添加教师表数据
+INSERT INTO teacher VALUES('804', '李诚', '男', '1958-12-02', '副教授', '计算机系');
+INSERT INTO teacher VALUES('856', '张旭', '男', '1969-03-12', '讲师', '电子工程系');
+INSERT INTO teacher VALUES('825', '王萍', '女', '1972-05-05', '助教', '计算机系');
+INSERT INTO teacher VALUES('831', '刘冰', '女', '1977-08-14', '助教', '电子工程系');
+
+#添加课程表数据
+INSERT INTO course VALUES('3-105', '计算机导论', '825');
+INSERT INTO course VALUES('3-245', '操作系统', '804');
+INSERT INTO course VALUES('6-166', '数字电路', '856');
+INSERT INTO course VALUES('9-888', '高等数学', '831');
+
+#添加成绩表数据
+INSERT INTO score VALUES('103', '3-105', '92');
+INSERT INTO score VALUES('103', '3-245', '86');
+INSERT INTO score VALUES('103', '6-166', '85');
+INSERT INTO score VALUES('105', '3-105', '88');
+INSERT INTO score VALUES('105', '3-245', '75');
+INSERT INTO score VALUES('105', '6-166', '79');
+INSERT INTO score VALUES('109', '3-105', '76');
+INSERT INTO score VALUES('109', '3-245', '68');
+INSERT INTO score VALUES('109', '6-166', '81');
+```
+
+#### 查询练习
+
+##### （1-10简单查询）
+
+```mysql
+#1.查询student表中所有记录。
+select * from student;
+#2.查询 student 表中所有记录的sname、ssex和class列。
+select sname,ssex,class from student;
+#3.查询教师所有的单位即不重复的depart列。
+select distinct depart from teacher;
+#4.查询score表中成绩在60到80之间的所有记录。
+select * from score where degree>=60 and degree<=80;
+#5.查询score表中成绩为85，86或88的记录。
+select * from score where degree=85 or degree=86 or degree=88;
+#6.查询student表中“95031"班或性别为“女”的同学记录。
+select * from student where class='95031' or ssex='女';
+#7.以class降序查询student表的所有记录。
+select * from student order by class desc;
+#8.以cno升序、degree降序查询score表的所有记录。
+select * from score order by cno asc,degree desc;
+#9.查询“95031"班的学生人数。
+select count(*) from student where class='95031';
+#10.查询score表中的最高分的学生学号和课程号。(子查询或者排序,排序会有bug，不建议)
+select sno,cno from score where degree=(select max(degree) from score);
+```
+
+##### 11.查询每门课的平均成绩
+
+```mysql
+#avg()
+select avg(degree) from score where cno='3-105';
+select avg(degree) from score where cno='3-166';
+select avg(degree) from score where cno='3-245';
+#group by --分组(可以实现一条语句显示)
+select cno,avg(degree) from score group by cno;
++-------+-------------+
+| cno   | avg(degree) |
++-------+-------------+
+| 3-105 |     85.3333 |
+| 3-245 |     76.3333 |
+| 6-166 |     81.6667 |
++-------+-------------+
+```
+
+##### 分组条件与模糊查询
+
+```mysql
+#12.查询 score 表中至少有 2 名学生选修，并以 3 开头的课程的平均分数。
+select cno,avg(degree) from score group by cno
+having count(cno)>2 and cno like '3%';
++-------+-------------+
+| cno   | avg(degree) |
++-------+-------------+
+| 3-105 |     85.3333 |
+| 3-245 |     76.3333 |
++-------+-------------+
+#like是模糊查询，%代表以三开头。
+```
+
+##### 范围查询的两种方式
+
+```mysql
+#13.查询分数大于70，小于90的sno列
+--方法一
+select sno,degree from score where degree>70 and degree<90;
++-----+--------+
+| sno | degree |
++-----+--------+
+| 103 |     86 |
+| 103 |     85 |
+| 105 |     88 |
+| 105 |     75 |
+| 105 |     79 |
+| 109 |     76 |
+| 109 |     81 |
++-----+--------+
+--方法二
+select sno,degree from score where degree between 70 and 90;
+--结果同上
+```
+
+##### 多表查询
+
+```mysql
+#查找时按照不同表中的共同字段进行匹配，然后进行查找。
+
+#14.查询所有学生的sname、cno和degree列。
+--sname来自于student表，cno、degree来自于score表
+select sname,cno,degree from student,score where student.sno=score.sno;
++-----------+-------+--------+
+| sname     | cno   | degree |
++-----------+-------+--------+
+| 王丽      | 3-105 |     92 |
+| 王丽      | 3-245 |     86 |
+| 王丽      | 6-166 |     85 |
+| 王芳      | 3-105 |     88 |
+| 王芳      | 3-245 |     75 |
+| 王芳      | 6-166 |     79 |
+| 赵铁柱    | 3-105 |     76 |
+| 赵铁柱    | 3-245 |     68 |
+| 赵铁柱    | 6-166 |     81 |
++-----------+-------+--------+
+
+
+#15.查询所有学生的sno、cname和degree列。
+cname来自于course表，sno、degree来自于score表
+select sno,cname,degree from course,score where course.cno=score.cno;
++-----+-----------------+--------+
+| sno | cname           | degree |
++-----+-----------------+--------+
+| 103 | 计算机导论      |     92 |
+| 105 | 计算机导论      |     88 |
+| 109 | 计算机导论      |     76 |
+| 103 | 操作系统        |     86 |
+| 105 | 操作系统        |     75 |
+| 109 | 操作系统        |     68 |
+| 103 | 数字电路        |     85 |
+| 105 | 数字电路        |     79 |
+| 109 | 数字电路        |     81 |
++-----+-----------------+--------+
+#16.查询所有学生的sname、cname和degree列（三表关联查询）。
+--两两关联即可
+--sname->student
+--cname->course
+--degree->score
+select sname,cname,degree from student,course,score 
+where student.sno=score.sno and course.cno=score.cno;
++-----------+-----------------+--------+
+| sname     | cname           | degree |
++-----------+-----------------+--------+
+| 王丽      | 计算机导论      |     92 |
+| 王芳      | 计算机导论      |     88 |
+| 赵铁柱    | 计算机导论      |     76 |
+| 王丽      | 操作系统        |     86 |
+| 王芳      | 操作系统        |     75 |
+| 赵铁柱    | 操作系统        |     68 |
+| 王丽      | 数字电路        |     85 |
+| 王芳      | 数字电路        |     79 |
+| 赵铁柱    | 数字电路        |     81 |
++-----------+-----------------+--------+
+#22.查询选修某课程的同学人数大于2的任课教师姓名
+--counting(*)的意思是 统计前面分组之后每个组有多少条记录
+--记录条数大于2就代表选修人数大于2
+--counting(*)的使用条件是必须先分组。
+select cno from score group by cno having count(*)>2;
++-------+
+| cno   |
++-------+
+| 3-105 |
+| 3-245 |
+| 6-166 |
++-------+
+--先用一次嵌套找到tno
+select tno from course where cno in(select cno from score group by cno having count(*)>2);
++-----+
+| tno |
++-----+
+| 804 |
+| 825 |
+| 856 |
++-----+
+--接着使用三层嵌套
+select tname from teacher where tno in (select tno from course where cno in(select cno from score group by cno having count(*)>2));
++--------+
+| tname  |
++--------+
+| 李诚   |
+| 王萍   |
+| 张旭   |
++--------+
+
+```
+
+##### 子查询加分组求平均
+
+```mysql
+#查询95031班学生每门课的平均分
+--思路：首先要把score里是95031班的学生找出来
+select sno from student where class='95031';
++-----+
+| sno |
++-----+
+| 102 |
+| 105 |
+| 106 |
+| 108 |
+| 109 |
++-----+
+--再使用一个子查询
+select * from score where sno in (select sno from student where class='95031');
++-----+-------+--------+
+| sno | cno   | degree |
++-----+-------+--------+
+| 105 | 3-105 |     88 |
+| 105 | 3-245 |     75 |
+| 105 | 6-166 |     79 |
+| 109 | 3-105 |     76 |
+| 109 | 3-245 |     68 |
+| 109 | 6-166 |     81 |
++-----+-------+--------+
+--这样就找到了95031班的学生成绩
+--接着进行分组计算平均成绩，分组的依据是课程号
+select cno,avg(degree) from score where sno in (select sno from student where class='95031') group by cno;
++-------+-------------+
+| cno   | avg(degree) |
++-------+-------------+
+| 3-105 |     82.0000 |
+| 3-245 |     71.5000 |
+| 6-166 |     80.0000 |
++-------+-------------+
+```
+
+##### 子查询
+
+```mysql
+#18.查询在 3-105 课程中，所有成绩高于 109 号同学的记录。
+--首先筛选出课堂号为 3-105 ，学号为 109 号同学的degree。
+select degree from score where cno='3-105' and sno='109';
++--------+
+| degree |
++--------+
+|     76 |
++--------+
+--再把这个条件添加到下面括号中
+select * from score where degree>(select degree from score where cno='3-105' and sno='109') and cno='3-105';
++-----+-------+--------+
+| sno | cno   | degree |
++-----+-------+--------+
+| 103 | 3-105 |     92 |
+| 105 | 3-105 |     88 |
++-----+-------+--------+
+--这就是学生的记录
+#19题过于简单，略。
+```
+
+##### YEAR 函数与带 IN 关键字的子查询
+
+```mysql
+#20.查询所有和 101 、108 号学生同年出生的sno、sname、sbirthday 列。
+--查询这两人的信息
+select * from student where sno in (108,101);
++-----+-----------+------+---------------------+-------+
+| sno | sname     | ssex | sbirthday           | class |
++-----+-----------+------+---------------------+-------+
+| 101 | 曾华      | 男   | 1977-09-01 00:00:00 | 95033 |
+| 108 | 张全蛋    | 男   | 1975-02-10 00:00:00 | 95031 |
++-----+-----------+------+---------------------+-------+
+--查询这两人的出生年份
+select year(sbirthday) from student where sno in (108,101);
++-----------------+
+| year(sbirthday) |
++-----------------+
+|            1977 |
+|            1975 |
++-----------------+
+--将这两人的出生年份作为条件，放到下面的括号中
+select sno,sname,sbirthday from student 
+where year(sbirthday) in (select year(sbirthday) from student where sno in (108,101));
++-----+-----------+---------------------+
+| sno | sname     | sbirthday           |
++-----+-----------+---------------------+
+| 101 | 曾华      | 1977-09-01 00:00:00 |
+| 102 | 匡明      | 1975-10-02 00:00:00 |
+| 105 | 王芳      | 1975-02-10 00:00:00 |
+| 108 | 张全蛋    | 1975-02-10 00:00:00 |
++-----+-----------+---------------------+
+#ps： 用in是因为108,101是两个数据，不是单一数据。
+```
+
+##### 多层嵌套子查询（套娃）
+
+```mysql
+#查询‘张旭’教师任课的学生成绩
+--思路：找到张旭的教师编号tno（条件1），再找tno对应的course，用course表中的cno匹配score中的cno（条件2）
+--条件1
+select tno from teacher where tname='张旭';
++-----+
+| tno |
++-----+
+| 856 |
++-----+
+--条件2
+select cno from course where tno=(select tno from teacher where tname='张旭');
++-------+
+| cno   |
++-------+
+| 6-166 |
++-------+
+--得到学生学号对应的degree
+select sno,degree from score where cno=(select cno from course where tno=(select tno from teacher where tname='张旭'));
++-----+--------+
+| sno | degree |
++-----+--------+
+| 103 |     85 |
+| 105 |     79 |
+| 109 |     81 |
++-----+--------+
+```
+
