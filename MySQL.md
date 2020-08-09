@@ -472,6 +472,26 @@ having count(cno)>2 and cno like '3%';
 #like是模糊查询，%代表以三开头。
 ```
 
+##### not like 模糊查询
+
+```mysql
+#查询student表中不姓王的同学的记录
+mysql> select * from student where sname not like '王%';
++-----+-----------+------+---------------------+-------+
+| sno | sname     | ssex | sbirthday           | class |
++-----+-----------+------+---------------------+-------+
+| 101 | 曾华      | 男   | 1977-09-01 00:00:00 | 95033 |
+| 102 | 匡明      | 男   | 1975-10-02 00:00:00 | 95031 |
+| 104 | 李军      | 男   | 1976-02-20 00:00:00 | 95033 |
+| 106 | 陆军      | 男   | 1974-06-03 00:00:00 | 95031 |
+| 108 | 张全蛋    | 男   | 1975-02-10 00:00:00 | 95031 |
+| 109 | 赵铁柱    | 男   | 1974-06-03 00:00:00 | 95031 |
++-----+-----------+------+---------------------+-------+
+-- 注意百分号的位置
+```
+
+
+
 ##### 范围查询的两种方式
 
 ```mysql
@@ -645,7 +665,15 @@ select * from score where degree>(select degree from score where cno='3-105' and
 | 105 | 3-105 |     88 |
 +-----+-------+--------+
 --这就是学生的记录
-#19题过于简单，略。
+。
+#查询男教师及其所上的课程
+mysql> select * from course where tno in (select tno from teacher where tsex='男');
++-------+--------------+-----+
+| cno   | cname        | tno |
++-------+--------------+-----+
+| 3-245 | 操作系统     | 804 |
+| 6-166 | 数字电路     | 856 |
++-------+--------------+-----+
 ```
 
 ##### YEAR 函数与带 IN 关键字的子查询
@@ -771,6 +799,29 @@ select sname,ssex,sbirthday from student;
 +-----------+-----+---------------------+
 ```
 
+##### MAX and MIN
+
+```MYSQL
+#查询student表中birthday的最大最小值
+mysql> select max(sbirthday) as '最大', min(sbirthday) as '最小' from student;
++---------------------+---------------------+
+| 最大                | 最小                |
++---------------------+---------------------+
+| 1977-09-01 00:00:00 | 1974-06-03 00:00:00 |
++---------------------+---------------------+
+
+#查询最高分同学的sno、cno和degree列
+select * from score where degree=(select max(degree) from score);
++-----+-------+--------+
+| sno | cno   | degree |
++-----+-------+--------+
+| 103 | 3-105 |     92 |
++-----+-------+--------+
+1 row in set (0.12 sec)
+```
+
+
+
 ##### ANY and ALL
 
 ```MYSQL
@@ -822,7 +873,7 @@ select * from score where cno='3-105' and degree>all(select degree from score wh
 ##### 复制表数据作条件查询
 
 ```mysql
-|#本题至今还未搞懂
+#本题至今还未搞懂
 #查询成绩比该课程成绩低的同学的score表
 --原理：先查询一张成绩表，作为a，再把a复制一份，作为b，求出b的平均成绩（按班级号分），再作比较
 select cno,avg(degree) from score group by cno;
@@ -845,3 +896,387 @@ select * from  score a where degree<(select avg(degree) from score b where a.cno
 +-----+-------+--------+
 ```
 
+##### 条件加分组筛选
+
+```mysql
+#查询至少有两名男生的班号
+mysql> select class from student where ssex='男' group by class having count(*)>1;
++-------+
+| class |
++-------+
+| 95033 |
+| 95031 |
++-------+
+```
+
+##### 多字段排序
+
+```mysql
+#以班号和年龄从大到小的顺序查询student表中的全部信息
+mysql> select * from student order by sbirthday desc,class desc;
++-----+-----------+------+---------------------+-------+
+| sno | sname     | ssex | sbirthday           | class |
++-----+-----------+------+---------------------+-------+
+| 101 | 曾华      | 男   | 1977-09-01 00:00:00 | 95033 |
+| 104 | 李军      | 男   | 1976-02-20 00:00:00 | 95033 |
+| 107 | 王尼玛    | 男   | 1976-02-20 00:00:00 | 95033 |
+| 103 | 王丽      | 女   | 1976-01-23 00:00:00 | 95033 |
+| 102 | 匡明      | 男   | 1975-10-02 00:00:00 | 95031 |
+| 105 | 王芳      | 女   | 1975-02-10 00:00:00 | 95031 |
+| 108 | 张全蛋    | 男   | 1975-02-10 00:00:00 | 95031 |
+| 106 | 陆军      | 男   | 1974-06-03 00:00:00 | 95031 |
+| 109 | 赵铁柱    | 男   | 1974-06-03 00:00:00 | 95031 |
++-----+-----------+------+---------------------+-------+
+```
+
+##### 按等级查询
+
+```mysql
+#建立一个grade表，用来存放学生的成绩等级
+CREATE TABLE grade (
+    low INT(3),
+    upp INT(3),
+    grade char(1)
+);
+
+INSERT INTO grade VALUES (90, 100, 'A');
+INSERT INTO grade VALUES (80, 89, 'B');
+INSERT INTO grade VALUES (70, 79, 'C');
+INSERT INTO grade VALUES (60, 69, 'D');
+INSERT INTO grade VALUES (0, 59, 'E');
+
+SELECT * FROM grade;
++------+------+-------+
+| low  | upp  | grade |
++------+------+-------+
+|   90 |  100 | A     |
+|   80 |   89 | B     |
+|   70 |   79 | C     |
+|   60 |   69 | D     |
+|    0 |   59 | E     |
++------+------+-------+
+
+#--------------------------------------------------------------------------
+#按等级查询所有同学的sno、cno、grade列
+select sno,cno,grade from score,grade where degree between low and upp;
++-----+-------+-------+
+| sno | cno   | grade |
++-----+-------+-------+
+| 103 | 3-105 | A     |
+| 103 | 3-245 | B     |
+| 103 | 6-166 | B     |
+| 105 | 3-105 | B     |
+| 105 | 3-245 | C     |
+| 105 | 6-166 | C     |
+| 109 | 3-105 | C     |
+| 109 | 3-245 | D     |
+| 109 | 6-166 | B     |
++-----+-------+-------+
+```
+
+
+
+### 连接查询
+
+#### 数据准备
+
+```mysql
+#创建一个数据库和两张表
+create database testJion;
+CREATE TABLE person (
+    id INT,
+    name VARCHAR(20),
+    cardId INT
+);
+
+CREATE TABLE card (
+    id INT,
+    name VARCHAR(20)
+);
+
+INSERT INTO card VALUES (1, '饭卡'), (2, '建行卡'), (3, '农行卡'), (4, '工商卡'), (5, '邮政卡');
+
+SELECT * FROM card;
++------+-----------+
+| id   | name      |
++------+-----------+
+|    1 | 饭卡      |
+|    2 | 建行卡    |
+|    3 | 农行卡    |
+|    4 | 工商卡    |
+|    5 | 邮政卡    |
++------+-----------+
+
+INSERT INTO person VALUES (1, '张三', 1), (2, '李四', 3), (3, '王五', 6);
+SELECT * FROM person;
++------+--------+--------+
+| id   | name   | cardId |
++------+--------+--------+
+|    1 | 张三   |      1 |
+|    2 | 李四   |      3 |
+|    3 | 王五   |      6 |
++------+--------+--------+
+```
+
+##### 内连接查询
+
+```mysql
+#用来查询两张表中有关联的数据
+-- inner join
+select * from person inner join card on person.cardId=card.id;
++------+--------+--------+------+-----------+
+| id   | name   | cardId | id   | name      |
++------+--------+--------+------+-----------+
+|    1 | 张三   |      1 |    1 | 饭卡      |
+|    2 | 李四   |      3 |    3 | 农行卡    |
++------+--------+--------+------+-----------+
+-- 这样就将cardId字段和id字段相同的部分的数据查询出来了
+-- 将 INNER 关键字省略掉，结果也是一样的。
+-- SELECT * FROM person JOIN card on person.cardId = card.id;
+```
+
+##### 左外连接
+
+完整显示左边的表 ( `person` ) ，右边的表如果符合条件就显示，不符合则补 `NULL` 。
+
+```mysql
+-- LEFT JOIN 也叫做 LEFT OUTER JOIN，用这两种方式的查询结果是一样的。
+SELECT * FROM person LEFT JOIN card on person.cardId = card.id;
++------+--------+--------+------+-----------+
+| id   | name   | cardId | id   | name      |
++------+--------+--------+------+-----------+
+|    1 | 张三   |      1 |    1 | 饭卡      |
+|    2 | 李四   |      3 |    3 | 农行卡    |
+|    3 | 王五   |      6 | NULL | NULL      |
++------+--------+--------+------+-----------+
+```
+
+##### 右外连接
+
+完整显示右边的表 ( `card` ) ，左边的表如果符合条件就显示，不符合则补 `NULL` 。
+
+```mysql
+SELECT * FROM person RIGHT JOIN card on person.cardId = card.id;
++------+--------+--------+------+-----------+
+| id   | name   | cardId | id   | name      |
++------+--------+--------+------+-----------+
+|    1 | 张三   |      1 |    1 | 饭卡      |
+|    2 | 李四   |      3 |    3 | 农行卡    |
+| NULL | NULL   |   NULL |    2 | 建行卡    |
+| NULL | NULL   |   NULL |    4 | 工商卡    |
+| NULL | NULL   |   NULL |    5 | 邮政卡    |
++------+--------+--------+------+-----------+
+```
+
+##### 全外连接
+
+完整显示两张表的数据
+
+```mysql
+-- MySQL 不支持这种语法的全外连接
+-- SELECT * FROM person FULL JOIN card on person.cardId = card.id;
+-- 出现错误：
+-- ERROR 1054 (42S22): Unknown column 'person.cardId' in 'on clause'
+
+-- MySQL全连接语法，使用 UNION 将两张表合并在一起。
+SELECT * FROM person LEFT JOIN card on person.cardId = card.id
+UNION
+SELECT * FROM person RIGHT JOIN card on person.cardId = card.id;
++------+--------+--------+------+-----------+
+| id   | name   | cardId | id   | name      |
++------+--------+--------+------+-----------+
+|    1 | 张三   |      1 |    1 | 饭卡      |
+|    2 | 李四   |      3 |    3 | 农行卡    |
+|    3 | 王五   |      6 | NULL | NULL      |
+| NULL | NULL   |   NULL |    2 | 建行卡    |
+| NULL | NULL   |   NULL |    4 | 工商卡    |
+| NULL | NULL   |   NULL |    5 | 邮政卡    |
++------+--------+--------+------+-----------+
+```
+
+### 事务
+
+在 MySQL 中，事务其实是一个最小的不可分割的工作单元。事务能够**保证一个业务的完整性**。
+
+比如我们的银行转账：
+
+```mysql
+-- a -> -100
+UPDATE user set money = money - 100 WHERE name = 'a';
+
+-- b -> +100
+UPDATE user set money = money + 100 WHERE name = 'b';
+```
+
+在实际项目中，假设一条 SQL 语句执行成功，而另外一条执行失败了，就会出现数据前后不一致。
+
+因此，在执行多条有关联 SQL 语句时，**事务**可能会要求这些 SQL 语句要么同时执行成功，要么就都执行失败。
+
+#### 如何控制事务 - COMMIT / ROLLBACK
+
+在 MySQL 中，事务的**自动提交**状态默认是开启的。
+
+```mysql
+#查询事务自动提交状态，1表示自动提交
+mysql> select @@autocommit;
++--------------+
+| @@autocommit |
++--------------+
+|            1 |
++--------------+
+-- 所谓自动提交就是执行一条sql语句，就会马上产生一个结果，且不能回滚
+-- 所谓回滚就是rollback，类似于crtl+z 撤销。
+```
+
+##### 关闭事务，让sql语句可以回滚
+
+```mysql
+set @@autocommit=0;
+-- 查询状态
+select @@autocommit;
++--------------+
+| @@autocommit |
++--------------+
+|            0 |
++--------------+
+
+#验证一下
+CREATE DATABASE bank;
+
+USE bank;
+
+CREATE TABLE user (
+    id INT PRIMARY KEY,
+    name VARCHAR(20),
+    money INT
+);
+
+INSERT INTO user VALUES (1, 'a', 1000);
+
+SELECT * FROM user;
++----+------+-------+
+| id | name | money |
++----+------+-------+
+|  1 | a    |  1000 |
++----+------+-------+
+
+#此时使用rollback
+rollback;
+-- 紧接着查询
+ SELECT * FROM user;
+Empty set (0.00 sec)
+-- 说明数据没有插入进去
+```
+
+##### commit方法确认修改数据（手动提交）
+
+```mysql
+INSERT INTO user VALUES (2, 'b', 1000);
+-- 手动提交数据（持久性），
+-- 将数据真正提交到数据库中，执行后不能再回滚提交过的数据。
+COMMIT;
+SELECT * FROM user;
++----+------+-------+
+| id | name | money |
++----+------+-------+
+|  2 | b    |  1000 |
++----+------+-------+
+#再使用rollback
+rollback;
+SELECT * FROM user;
+SELECT * FROM user;
++----+------+-------+
+| id | name | money |
++----+------+-------+
+|  2 | b    |  1000 |
++----+------+-------+
+-- 说明rollback失效了
+```
+
+来说说转账问题
+
+```mysql
+UPDATE user set money = money - 100 WHERE name = 'a';
+UPDATE user set money = money + 100 WHERE name = 'b';
+select * from user;
+mysql> select * from user;
++----+------+-------+
+| id | name | money |
++----+------+-------+
+|  1 | a    |  900 |
+|  2 | b    |  1100 |
++----+------+-------+
+
+#假设执行该操作时发生了意外，需要回滚。
+ROLLBACK;
+SELECT * FROM user;
++----+------+-------+
+| id | name | money |
++----+------+-------+
+|  1 | a    |  1000 |
+|  2 | b    |  1000 |
++----+------+-------+
+```
+
+##### 手动开启事务 - BEGIN / START TRANSACTION
+
+事务的默认提交被开启 ( `@@AUTOCOMMIT = 1` ) 后，此时就不能使用事务回滚了。但是我们还可以手动开启一个事务处理事件，使其可以发生回滚：
+
+```mysql
+-- 使用 BEGIN 或者 START TRANSACTION 手动开启一个事务
+-- START TRANSACTION;
+BEGIN;
+UPDATE user set money = money - 100 WHERE name = 'a';
+UPDATE user set money = money + 100 WHERE name = 'b';
+
+-- 由于手动开启的事务没有开启自动提交，
+-- 此时发生变化的数据仍然是被保存在一张临时表中。
+SELECT * FROM user;
++----+------+-------+
+| id | name | money |
++----+------+-------+
+|  1 | a    |   900 |
+|  2 | b    |  1100 |
++----+------+-------+
+
+-- 测试回滚
+ROLLBACK;
+
+SELECT * FROM user;
++----+------+-------+
+| id | name | money |
++----+------+-------+
+|  1 | a    |  1000 |
+|  2 | b    |  1000 |
++----+------+-------+
+#仍然使用 COMMIT 提交数据，提交后无法再发生本次事务的回滚。
+```
+
+#### 事物的四大特性
+
+1. **A 原子性：事务是最小的单位，不可被分割**
+2. **C 一致性：要求同一事务中的 SQL 语句，必须保证同时成功或者失败**
+3. **I  隔离性：事务1 和 事务2 之间是具有隔离性的****
+4. **D 持久性：事务一旦结束 ( `COMMIT` ) ，就不可以再返回了 ( `ROLLBACK` ) 。**
+
+#### 事务的隔离性
+
+**事务的隔离性可分为四种 ( 性能从低到高 )** ：
+
+1. **READ UNCOMMITTED ( 读取未提交 )**
+
+   如果有多个事务，那么任意事务都可以看见其他事务的**未提交数据**。
+
+2. **READ COMMITTED ( 读取已提交 )**
+
+   只能读取到其他事务**已经提交的数据**。
+
+3. **REPEATABLE READ ( 可被重复读 )**
+
+   如果有多个连接都开启了事务，那么事务之间不能共享数据记录，否则只能共享已提交的记录。
+
+4. **SERIALIZABLE ( 串行化 )**
+
+   所有的事务都会按照**固定顺序执行**，执行完一个事务后再继续执行下一个事务的**写入操作**。
+
+未完待续
